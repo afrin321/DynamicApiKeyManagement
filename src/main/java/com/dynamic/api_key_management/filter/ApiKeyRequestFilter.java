@@ -42,6 +42,15 @@ public class ApiKeyRequestFilter extends OncePerRequestFilter {
 
         // Extract the API key from the request header
         String apiKey = request.getHeader("x-api-key");
+
+        if (apiKey == null || apiKey.isEmpty()) {
+            // API key is missing, respond with an unauthorized status
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Unauthorized: API key is missing\"}");
+            return;
+        }
+
         String hashedApiKey = null;
         try {
             hashedApiKey = ApiKeyUtils.hashApiKey(apiKey);
@@ -50,7 +59,7 @@ public class ApiKeyRequestFilter extends OncePerRequestFilter {
         }
 
         // Validate the API key
-        if (apiKey != null && clientService.isValidApiKey(hashedApiKey)) {
+        if (clientService.isValidApiKey(hashedApiKey)) {
             // Set authentication in the context to let Spring Security know this request is authenticated
             Authentication auth = new AnonymousAuthenticationToken(
                     "apiKey", "authenticatedClient",
@@ -61,6 +70,8 @@ public class ApiKeyRequestFilter extends OncePerRequestFilter {
         } else {
             // API key is invalid, respond with an unauthorized status
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Unauthorized: API key is invalid\"}");
             return;
         }
 
